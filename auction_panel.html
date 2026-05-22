@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ACC 10 Auction Panel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+:root{
+  --dark-bg:#00111a;
+  --neon:#00eaff;
+  --neon2:#9ffcff;
+}
+
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:radial-gradient(circle,#06273a,#00101a 70%);
+  color:white;
+  padding-bottom:40px;
+}
+
+.top-panel{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  justify-content:center;
+  padding:18px;
+}
+
+.control-box{
+  padding:10px 12px;
+  border-radius:10px;
+  background:rgba(0,20,35,0.6);
+}
+
+.control-box label{
+  display:block;
+  margin-bottom:6px;
+  color:var(--neon2);
+}
+
+.control-box input{
+  width:120px;
+  padding:6px;
+  border-radius:6px;
+  border:none;
+  background:#00121c;
+  color:var(--neon);
+}
+
+.button{
+  padding:10px 14px;
+  border-radius:8px;
+  border:0;
+  background:var(--neon);
+  color:#00131b;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.display{
+  width:92%;
+  max-width:420px;
+  margin:18px auto;
+  border-radius:14px;
+  overflow:hidden;
+  display:flex;
+  background:#00111a;
+}
+
+.color-strip{
+  width:60px;
+}
+
+.content{
+  padding:20px;
+  flex:1;
+}
+
+.big-bid{
+  font-size:58px;
+  font-weight:800;
+}
+
+.team-label{
+  font-size:24px;
+  margin-top:6px;
+}
+
+.cooldown{
+  color:#ffe082;
+  margin-top:8px;
+  font-weight:700;
+}
+
+.rejection{
+  color:#ff9b9b;
+  margin-top:8px;
+}
+
+.team-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:12px;
+  width:92%;
+  max-width:1200px;
+  margin:20px auto;
+}
+
+.team-cell{
+  border-radius:12px;
+  overflow:hidden;
+  padding:14px;
+  color:white;
+}
+
+.team-cell input{
+  width:100%;
+  background:transparent;
+  border:none;
+  color:white;
+  font-size:18px;
+  font-weight:700;
+}
+
+.team-max{
+  margin-top:8px;
+}
+
+.rules{
+  width:92%;
+  max-width:1000px;
+  margin:20px auto;
+}
+
+.rules .row{
+  display:flex;
+  gap:8px;
+  margin-bottom:8px;
+}
+
+.rules input{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:none;
+  background:#00121c;
+  color:white;
+}
+
+@media(max-width:900px){
+  .team-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .big-bid{
+    font-size:42px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="top-panel">
+
+<div class="control-box">
+<label>Starting Bid</label>
+<input id="startBid" type="number" value="100">
+</div>
+
+<div class="control-box">
+<label>Fallback Increment</label>
+<input id="fallbackInc" type="number" value="10">
+</div>
+
+<button class="button" onclick="undoBid()">Undo</button>
+<button class="button" onclick="playerSold()">Player Sold</button>
+<button class="button" onclick="resetBid()">Reset</button>
+<button class="button" onclick="startAuction()">Start Auction</button>
+
+</div>
+
+<div class="display" id="mainDisplay">
+
+<div class="color-strip" id="currentStrip"></div>
+
+<div class="content">
+
+<div>CURRENT BID</div>
+
+<div class="big-bid" id="currentBid">100</div>
+
+<div class="team-label" id="currentTeam">---</div>
+
+<div class="cooldown" id="cooldownText"></div>
+
+<div class="rejection" id="rejectionNote"></div>
+
+</div>
+</div>
+
+<div class="team-grid" id="teamGrid"></div>
+
+<div class="rules">
+
+<div class="row">
+<input id="r1_from" placeholder="From">
+<input id="r1_to" placeholder="To">
+<input id="r1_inc" placeholder="Increment">
+</div>
+
+<div class="row">
+<input id="r2_from" placeholder="From">
+<input id="r2_to" placeholder="To">
+<input id="r2_inc" placeholder="Increment">
+</div>
+
+<div class="row">
+<input id="r3_from" placeholder="From">
+<input id="r3_to" placeholder="To">
+<input id="r3_inc" placeholder="Increment">
+</div>
+
+<div class="row">
+<input id="r4_from" placeholder="From">
+<input id="r4_to" placeholder="To">
+<input id="r4_inc" placeholder="Increment">
+</div>
+
+<div class="row">
+<input id="r5_from" placeholder="From">
+<input id="r5_to" placeholder="To">
+<input id="r5_inc" placeholder="Increment">
+</div>
+
+<button class="button" onclick="saveRules()">
+Save Rules
+</button>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+
+const TEAM_COUNT = 10;
+const BID_COOLDOWN = 5000;
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCX6FYo5gVgCmds7Xf63xF-Xcg6eIutQmk",
+  authDomain: "auction-71c28.firebaseapp.com",
+  databaseURL: "https://auction-71c28-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "auction-71c28",
+  storageBucket: "auction-71c28.firebasestorage.app",
+  messagingSenderId: "92883040612",
+  appId: "1:92883040612:web:473f540c99efc20e8d2271"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const db = firebase.database();
+
+const ownerKeys = {
+  "t1_Km8Qx2Lp9A":1,
+  "t2_Vn4Rb7Ty3M":2,
+  "t3_Zp6Hd1Wx8K":3,
+  "t4_Qr9Lm5Nc2J":4,
+  "t5_Yu3Bx8Pa6T":5,
+  "t6_Fk1Vz7Dw4R":6,
+  "t7_Hm5Qp2Ls9X":7,
+  "t8_Jt8Nc4Vy1B":8,
+  "t9_Mx2Rw6Qa7P":9,
+  "t10_Pv7Lk3Dz5N":10
+};
+
+const defaultTeams = {
+  1:"Team 1",
+  2:"Team 2",
+  3:"Team 3",
+  4:"Team 4",
+  5:"Team 5",
+  6:"Team 6",
+  7:"Team 7",
+  8:"Team 8",
+  9:"Team 9",
+  10:"Team 10"
+};
+
+const TEAM_COLORS = {
+1:{base:"#0b4d6b", glow:"rgba(11,77,107,0.25)"},
+2:{base:"#5b1b1b", glow:"rgba(91,27,27,0.25)"},
+3:{base:"#8a5c00", glow:"rgba(138,92,0,0.25)"},
+4:{base:"#3e1364", glow:"rgba(62,19,100,0.25)"},
+5:{base:"#7c2e00", glow:"rgba(124,46,0,0.25)"},
+6:{base:"#00416a", glow:"rgba(0,65,106,0.25)"},
+7:{base:"#6b0041", glow:"rgba(107,0,65,0.25)"},
+8:{base:"#7a4b00", glow:"rgba(122,75,0,0.25)"},
+9:{base:"#004d40", glow:"rgba(0,77,64,0.25)"},
+10:{base:"#880e4f", glow:"rgba(136,14,79,0.25)"}
+};
+
+db.ref('teams').once('value').then(s=>{
+  if(!s.exists()) db.ref('teams').set(defaultTeams);
+});
+
+db.ref('ownerKeys').once('value').then(s=>{
+  if(!s.exists()) db.ref('ownerKeys').set(ownerKeys);
+});
+
+const teamGrid = document.getElementById('teamGrid');
+
+for(let i=1;i<=TEAM_COUNT;i++){
+
+  const tile = document.createElement('div');
+
+  tile.className = 'team-cell';
+
+  tile.style.background = TEAM_COLORS[i].base;
+
+  tile.innerHTML = `
+    <input id="t${i}">
+    <div class="team-max" id="t${i}_max">Max: —</div>
+  `;
+
+  tile.onclick = ()=> placeBid(i);
+
+  teamGrid.appendChild(tile);
+}
+
+db.ref('teams').on('value', snap=>{
+
+  const teams = snap.val() || {};
+
+  for(let i=1;i<=TEAM_COUNT;i++){
+
+    const el = document.getElementById('t'+i);
+
+    el.value = teams[i] || ('Team '+i);
+  }
+});
+
+teamGrid.addEventListener('input', ()=>{
+
+  const obj = {};
+
+  for(let i=1;i<=TEAM_COUNT;i++){
+    obj[i] = document.getElementById('t'+i).value;
+  }
+
+  db.ref('teams').set(obj);
+});
+
+const SHEET_ID = "1uww5Uq0-kya9gM4pTWFgp79n4lVgeH0Nr6C_v7FOjQ4";
+
+const GVIZ_URL =
+`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&range=B27:K27`;
+
+let maxBids = {};
+
+function fetchSheet(){
+
+fetch(GVIZ_URL)
+.then(r=>r.text())
+.then(txt=>{
+
+const jsonText = txt.replace(/^[^\(]*\(/,'').replace(/\);?$/,'');
+
+const obj = JSON.parse(jsonText);
+
+const rows = obj.table.rows[0].c;
+
+const newMax = {};
+
+for(let i=0;i<TEAM_COUNT;i++){
+
+const cell = rows[i];
+
+newMax[String(i+1)] =
+cell && cell.v ? Number(cell.v) : 0;
+}
+
+maxBids = newMax;
+
+db.ref('maxBids').set(maxBids);
+
+});
+}
+
+fetchSheet();
+
+setInterval(fetchSheet,10000);
+
+db.ref('maxBids').on('value', snap=>{
+
+maxBids = snap.val() || {};
+
+for(let i=1;i<=TEAM_COUNT;i++){
+
+const el = document.getElementById(`t${i}_max`);
+
+el.innerText =
+'Max: ' + (maxBids[i] || '—');
+}
+});
+
+let increments = [];
+
+db.ref('increments').on('value', snap=>{
+
+increments = snap.val() || [];
+
+for(let i=0;i<5;i++){
+
+const r = increments[i] || {};
+
+document.getElementById(`r${i+1}_from`).value = r.from || "";
+document.getElementById(`r${i+1}_to`).value = r.to || "";
+document.getElementById(`r${i+1}_inc`).value = r.inc || "";
+}
+});
+
+function saveRules(){
+
+const arr = [];
+
+for(let i=1;i<=5;i++){
+
+arr.push({
+from:Number(document.getElementById(`r${i}_from`).value),
+to:Number(document.getElementById(`r${i}_to`).value),
+inc:Number(document.getElementById(`r${i}_inc`).value)
+});
+}
+
+db.ref('increments').set(arr);
+
+alert("Rules Saved");
+}
+
+function getIncrementFor(v){
+
+for(const r of increments){
+
+if(v >= r.from && v <= r.to){
+return r.inc;
+}
+}
+
+return Number(document.getElementById('fallbackInc').value) || 10;
+}
+
+let currentBid =
+Number(document.getElementById('startBid').value);
+
+let history = [];
+
+let lastBidTeam = null;
+
+let saleLocked = false;
+
+let auctionRunning = false;
+
+let cooldownActive = false;
+
+function setCurrentStrip(teamNum){
+
+const col = TEAM_COLORS[teamNum].base;
+
+document.getElementById('currentStrip').style.background = col;
+
+document.getElementById('mainDisplay').style.background = col;
+}
+
+function updateDisplay(team){
+
+document.getElementById('currentBid').innerText = currentBid;
+
+document.getElementById('currentTeam').innerText = team;
+}
+
+function updateOwners(){
+
+db.ref('liveDisplay').set({
+currentBid,
+currentTeam:document.getElementById('currentTeam').innerText,
+ts:Date.now()
+});
+}
+
+function startCooldown(){
+
+cooldownActive = true;
+
+let remain = 5;
+
+document.getElementById('cooldownText').innerText =
+`Cooldown: ${remain}s`;
+
+const int = setInterval(()=>{
+
+remain--;
+
+document.getElementById('cooldownText').innerText =
+remain > 0 ? `Cooldown: ${remain}s` : '';
+
+if(remain <= 0){
+
+clearInterval(int);
+
+cooldownActive = false;
+}
+
+},1000);
+}
+
+function placeBid(teamNum){
+
+if(saleLocked) return;
+
+if(!auctionRunning) return;
+
+if(cooldownActive) return;
+
+if(lastBidTeam === teamNum) return;
+
+const teamMax =
+Number(maxBids[String(teamNum)] || 0);
+
+const nextValue =
+history.length === 0
+? currentBid
+: currentBid + getIncrementFor(currentBid);
+
+if(teamMax > 0 && nextValue > teamMax){
+
+document.getElementById('rejectionNote').innerText =
+`Bid rejected — max ${teamMax}`;
+
+setTimeout(()=>{
+document.getElementById('rejectionNote').innerText='';
+},4000);
+
+return;
+}
+
+const teamName =
+document.getElementById('t'+teamNum).value;
+
+history.push({
+bid:currentBid,
+team:document.getElementById('currentTeam').innerText
+});
+
+if(history.length > 1){
+
+currentBid += getIncrementFor(currentBid);
+}
+
+lastBidTeam = teamNum;
+
+updateDisplay(teamName);
+
+setCurrentStrip(teamNum);
+
+updateOwners();
+
+db.ref('last10bids').once('value').then(s=>{
+
+let arr = s.val() || [];
+
+arr.unshift({
+teamNum,
+team:teamName,
+amount:currentBid
+});
+
+arr = arr.slice(0,10);
+
+db.ref('last10bids').set(arr);
+});
+
+startCooldown();
+}
+
+function undoBid(){
+
+if(history.length === 0) return;
+
+const last = history.pop();
+
+currentBid = last.bid;
+
+updateDisplay(last.team);
+
+updateOwners();
+}
+
+function playerSold(){
+
+saleLocked = true;
+
+auctionRunning = false;
+
+const teamName =
+document.getElementById('currentTeam').innerText;
+
+db.ref('liveDisplay').set({
+currentBid,
+currentTeam:"SOLD",
+soldTo:teamName,
+ts:Date.now()
+});
+
+document.getElementById('currentTeam').innerText =
+"SOLD TO: " + teamName;
+}
+
+function resetBid(){
+
+auctionRunning = false;
+
+saleLocked = false;
+
+history = [];
+
+currentBid =
+Number(document.getElementById('startBid').value);
+
+updateDisplay('---');
+
+updateOwners();
+
+db.ref('last10bids').set([]);
+}
+
+function startAuction(){
+
+saleLocked = false;
+
+auctionRunning = true;
+}
+
+document.addEventListener('keydown', e=>{
+
+if(e.key >= '1' && e.key <= '9'){
+placeBid(Number(e.key));
+}
+
+if(e.key === '0'){
+placeBid(10);
+}
+});
+
+let lastSeen = 0;
+
+db.ref('latestBid').on('value', snap=>{
+
+const d = snap.val();
+
+if(!d) return;
+
+if(d.time <= lastSeen) return;
+
+lastSeen = d.time;
+
+placeBid(Number(d.teamNum));
+});
+
+updateDisplay('---');
+
+setCurrentStrip(1);
+
+updateOwners();
+
+</script>
+
+</body>
+</html>
