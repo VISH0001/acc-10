@@ -341,37 +341,37 @@ for(let i=1;i<=10;i++){
 
 }
 
-/* LOAD TEAM NAMES */
+/* ORIGINAL STYLE TEAM SAVE/LOAD */
 
 db.ref('teams').once('value').then(snap=>{
 
-const data = snap.val();
-
-if(data){
-
-for(let i=1;i<=10;i++){
-
-document.getElementById('t'+i).value =
-data[i] || ('Team '+i);
-
-}
-
-}else{
+if(!snap.exists()){
 
 db.ref('teams').set(defaultTeams);
 
+}
+
+});
+
+db.ref("teams").on("value", snap => {
+
+const teams = snap.val() || {};
+
 for(let i=1;i<=10;i++){
 
-document.getElementById('t'+i).value =
-defaultTeams[i];
+const input =
+document.getElementById("t"+i);
+
+if(input){
+
+input.value =
+teams[i] || input.value || ("Team "+i);
 
 }
 
 }
 
 });
-
-/* SAVE TEAM NAMES */
 
 function saveTeams(){
 
@@ -380,11 +380,11 @@ const obj = {};
 for(let i=1;i<=10;i++){
 
 obj[i] =
-document.getElementById('t'+i).value;
+document.getElementById("t"+i).value;
 
 }
 
-db.ref('teams').set(obj);
+db.ref("teams").set(obj);
 
 }
 
@@ -448,8 +448,6 @@ document.getElementById(`t${i}_max`).innerText =
 
 });
 
-/* INCREMENT */
-
 function getIncrementFor(v){
 
 for(let i=0;i<increments.length;i++){
@@ -467,8 +465,6 @@ return r.inc;
 return 1;
 
 }
-
-/* LAST10 */
 
 function pushToLast10(teamNum, amount, teamName){
 
@@ -504,8 +500,6 @@ db.ref('last10bids').set(arr);
 
 }
 
-/* STATE */
-
 let currentBid = 1;
 
 let history = [];
@@ -518,8 +512,6 @@ let auctionRunning = false;
 
 let cooldownActive = false;
 
-/* START */
-
 function startAuction(){
 
 saleLocked = false;
@@ -527,8 +519,6 @@ saleLocked = false;
 auctionRunning = true;
 
 }
-
-/* DISPLAY */
 
 function updateDisplay(team){
 
@@ -563,8 +553,6 @@ ts:Date.now()
 });
 
 }
-
-/* BID */
 
 function placeBid(teamNum){
 
@@ -639,8 +627,6 @@ cooldownActive = false;
 
 }
 
-/* UNDO */
-
 function undoBid(){
 
 saleLocked = false;
@@ -664,8 +650,6 @@ updateOwners();
 removeTopLast10();
 
 }
-
-/* RESET */
 
 function resetBid(){
 
@@ -691,8 +675,6 @@ updateOwners();
 db.ref('last10bids').set([]);
 
 }
-
-/* SOLD */
 
 function playerSold(){
 
@@ -723,8 +705,6 @@ ts:Date.now()
 
 }
 
-/* KEYBOARD */
-
 document.addEventListener('keydown', e=>{
 
 if(e.key >= '1' && e.key <= '9'){
@@ -740,8 +720,6 @@ placeBid(10);
 }
 
 });
-
-/* OWNER BIDS */
 
 let lastSeenTime = 0;
 
