@@ -244,7 +244,7 @@ Start Auction
 
 <script>
 
-const BID_COOLDOWN = 1500;
+const BID_COOLDOWN = 3000;
 
 const firebaseConfig = {
   apiKey: "AIzaSyCX6FYo5gVgCmds7Xf63xF-Xcg6eIutQmk",
@@ -328,7 +328,7 @@ for(let i=1;i<=10;i++){
     <div class="strip" style="background:${col}"></div>
 
     <div class="body">
-      <input id="t${i}">
+      <input id="t${i}" onchange="saveTeams()">
       <div id="t${i}_max" class="team-max">
         Max: —
       </div>
@@ -341,7 +341,7 @@ for(let i=1;i<=10;i++){
 
 }
 
-/* TEAM LOAD + PERSIST */
+/* LOAD TEAM NAMES */
 
 db.ref('teams').once('value').then(snap=>{
 
@@ -371,28 +371,20 @@ defaultTeams[i];
 
 });
 
-/* TEAM SAVE */
+/* SAVE TEAM NAMES */
 
-for(let i=1;i<=10;i++){
-
-document.addEventListener('input', e=>{
-
-if(e.target.id === 't'+i){
+function saveTeams(){
 
 const obj = {};
 
-for(let j=1;j<=10;j++){
+for(let i=1;i<=10;i++){
 
-obj[j] =
-document.getElementById('t'+j).value;
+obj[i] =
+document.getElementById('t'+i).value;
 
 }
 
 db.ref('teams').set(obj);
-
-}
-
-});
 
 }
 
