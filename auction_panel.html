@@ -1,3 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8">
+<title>ACC 10 Auction Panel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+
+body{
+margin:0;
+font-family:Arial,Helvetica,sans-serif;
+background:#02131d;
+color:white;
+padding-bottom:40px;
+}
+
+.top-panel{
+display:flex;
+gap:12px;
+flex-wrap:wrap;
+justify-content:center;
+padding:20px;
+}
+
+.control-box{
+background:#001d2c;
+padding:10px;
+border-radius:10px;
+}
+
+.control-box label{
+display:block;
+margin-bottom:6px;
+color:#8eeeff;
+}
+
+.control-box input{
+padding:8px;
+width:120px;
+border:none;
+border-radius:6px;
+background:#00111a;
+color:white;
+}
+
+.button{
+padding:10px 14px;
+border:none;
+border-radius:8px;
+background:#00eaff;
+font-weight:bold;
+cursor:pointer;
+}
+
+.display{
+width:92%;
+max-width:450px;
+margin:20px auto;
+border-radius:14px;
+overflow:hidden;
+display:flex;
+background:#0b4d6b;
+}
+
+.color-strip{
+width:60px;
+background:#0b4d6b;
+}
+
+.content{
+padding:20px;
+flex:1;
+}
+
+.big-bid{
+font-size:58px;
+font-weight:800;
+}
+
+.team-label{
+font-size:24px;
+margin-top:8px;
+}
+
+.rejection{
+margin-top:8px;
+color:#ff9999;
+font-weight:bold;
+}
+
+.team-grid{
+display:grid;
+grid-template-columns:repeat(5,1fr);
+gap:12px;
+width:92%;
+max-width:1200px;
+margin:20px auto;
+}
+
+.team-cell{
+padding:14px;
+border-radius:12px;
+cursor:pointer;
+transition:0.2s;
+}
+
+.team-cell:hover{
+transform:scale(1.03);
+}
+
+.team-cell input{
+width:100%;
+background:transparent;
+border:none;
+color:white;
+font-size:18px;
+font-weight:700;
+}
+
+.team-max{
+margin-top:8px;
+font-size:14px;
+}
+
+.rules{
+width:92%;
+max-width:1000px;
+margin:20px auto;
+}
+
+.rules .row{
+display:flex;
+gap:8px;
+margin-bottom:8px;
+}
+
+.rules input{
+width:100%;
+padding:10px;
+border:none;
+border-radius:8px;
+background:#00111a;
+color:white;
+}
+
+@media(max-width:900px){
+
+.team-grid{
+grid-template-columns:repeat(2,1fr);
+}
+
+.big-bid{
+font-size:42px;
+}
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="top-panel">
+
+<div class="control-box">
+<label>Starting Bid</label>
+<input id="startBid" type="number" value="100">
+</div>
+
+<div class="control-box">
+<label>Fallback Increment</label>
+<input id="fallbackInc" type="number" value="10">
+</div>
+
+<button class="button" onclick="undoBid()">Undo</button>
+<button class="button" onclick="playerSold()">Player Sold</button>
+<button class="button" onclick="resetBid()">Reset</button>
+<button class="button" onclick="startAuction()">Start Auction</button>
+
+</div>
+
+<div class="display" id="mainDisplay">
+
+<div class="color-strip" id="currentStrip"></div>
+
+<div class="content">
+
+<div>CURRENT BID</div>
+
+<div class="big-bid" id="currentBid">100</div>
+
+<div class="team-label" id="currentTeam">---</div>
+
+<div class="rejection" id="rejectionNote"></div>
+
+</div>
+
+</div>
+
+<div class="team-grid" id="teamGrid"></div>
+
+<div class="rules">
+
+<div class="row">
+<input id="r1_from" placeholder="From">
+<input id="r1_to" placeholder="To">
+<input id="r1_inc" placeholder="Increment">
+</div>
+
+<div class="row">
+<input id="r2_from" placeholder="From">
+<input id="r2_to" placeholder="To">
+<input id="r2_inc" placeholder="Increment">
+</div>
+
+<div class="row">
+<input id="r3_from" placeholder="From">
+<input id="r3_to" placeholder="To">
+<input id="r3_inc" placeholder="Increment">
+</div>
+
+<div class="row">
+<input id="r4_from" placeholder="From">
+<input id="r4_to" placeholder="To">
+<input id="r4_inc" placeholder="Increment">
+</div>
+
+<div class="row">
+<input id="r5_from" placeholder="From">
+<input id="r5_to" placeholder="To">
+<input id="r5_inc" placeholder="Increment">
+</div>
+
+<button class="button" onclick="saveRules()">
+Save Rules
+</button>
+
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -6,73 +247,60 @@
 const TEAM_COUNT = 10;
 const BID_COOLDOWN = 3000;
 
-/* FIREBASE */
 const firebaseConfig = {
-  apiKey: "AIzaSyCX6FYo5gVgCmds7Xf63xF-Xcg6eIutQmk",
-  authDomain: "auction-71c28.firebaseapp.com",
-  databaseURL: "https://auction-71c28-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "auction-71c28",
-  storageBucket: "auction-71c28.firebasestorage.app",
-  messagingSenderId: "92883040612",
-  appId: "1:92883040612:web:473f540c99efc20e8d2271"
+apiKey: "AIzaSyCX6FYo5gVgCmds7Xf63xF-Xcg6eIutQmk",
+authDomain: "auction-71c28.firebaseapp.com",
+databaseURL: "https://auction-71c28-default-rtdb.asia-southeast1.firebasedatabase.app",
+projectId: "auction-71c28",
+storageBucket: "auction-71c28.firebasestorage.app",
+messagingSenderId: "92883040612",
+appId: "1:92883040612:web:473f540c99efc20e8d2271"
 };
 
 firebase.initializeApp(firebaseConfig);
 
 const db = firebase.database();
 
-/* OWNER KEYS */
 const ownerKeys = {
-  "t1_Km8Qx2Lp9A":1,
-  "t2_Vn4Rb7Ty3M":2,
-  "t3_Zp6Hd1Wx8K":3,
-  "t4_Qr9Lm5Nc2J":4,
-  "t5_Yu3Bx8Pa6T":5,
-  "t6_Fk1Vz7Dw4R":6,
-  "t7_Hm5Qp2Ls9X":7,
-  "t8_Jt8Nc4Vy1B":8,
-  "t9_Mx2Rw6Qa7P":9,
-  "t10_Pv7Lk3Dz5N":10
+"t1_Km8Qx2Lp9A":1,
+"t2_Vn4Rb7Ty3M":2,
+"t3_Zp6Hd1Wx8K":3,
+"t4_Qr9Lm5Nc2J":4,
+"t5_Yu3Bx8Pa6T":5,
+"t6_Fk1Vz7Dw4R":6,
+"t7_Hm5Qp2Ls9X":7,
+"t8_Jt8Nc4Vy1B":8,
+"t9_Mx2Rw6Qa7P":9,
+"t10_Pv7Lk3Dz5N":10
 };
 
-/* TEAM NAMES */
-const defaultTeams = {
-  1:"Team 1",
-  2:"Team 2",
-  3:"Team 3",
-  4:"Team 4",
-  5:"Team 5",
-  6:"Team 6",
-  7:"Team 7",
-  8:"Team 8",
-  9:"Team 9",
-  10:"Team 10"
-};
-
-/* DISTINCT COLORS */
 const TEAM_COLORS = {
-1:{base:"#1565C0", glow:"rgba(21,101,192,0.35)"},
-2:{base:"#C62828", glow:"rgba(198,40,40,0.35)"},
-3:{base:"#2E7D32", glow:"rgba(46,125,50,0.35)"},
-4:{base:"#6A1B9A", glow:"rgba(106,27,154,0.35)"},
-5:{base:"#EF6C00", glow:"rgba(239,108,0,0.35)"},
-6:{base:"#00838F", glow:"rgba(0,131,143,0.35)"},
-7:{base:"#AD1457", glow:"rgba(173,20,87,0.35)"},
-8:{base:"#5D4037", glow:"rgba(93,64,55,0.35)"},
-9:{base:"#283593", glow:"rgba(40,53,147,0.35)"},
-10:{base:"#9E9D24", glow:"rgba(158,157,36,0.35)"}
+1:"#1565C0",
+2:"#C62828",
+3:"#2E7D32",
+4:"#6A1B9A",
+5:"#EF6C00",
+6:"#00838F",
+7:"#AD1457",
+8:"#5D4037",
+9:"#283593",
+10:"#9E9D24"
 };
 
-/* INIT DB */
+const defaultTeams = {};
+
+for(let i=1;i<=TEAM_COUNT;i++){
+defaultTeams[i] = "Team " + i;
+}
+
 db.ref('teams').once('value').then(s=>{
-  if(!s.exists()) db.ref('teams').set(defaultTeams);
+if(!s.exists()) db.ref('teams').set(defaultTeams);
 });
 
 db.ref('ownerKeys').once('value').then(s=>{
-  if(!s.exists()) db.ref('ownerKeys').set(ownerKeys);
+if(!s.exists()) db.ref('ownerKeys').set(ownerKeys);
 });
 
-/* DEFAULT INCREMENTS */
 db.ref('increments').once('value').then(s=>{
 
 if(!s.exists()){
@@ -89,7 +317,6 @@ db.ref('increments').set([
 
 });
 
-/* TEAM GRID */
 const teamGrid = document.getElementById('teamGrid');
 
 for(let i=1;i<=TEAM_COUNT;i++){
@@ -98,22 +325,19 @@ const tile = document.createElement('div');
 
 tile.className = 'team-cell';
 
-tile.style.background = TEAM_COLORS[i].base;
-
-tile.style.boxShadow =
-`0 0 18px ${TEAM_COLORS[i].glow}`;
+tile.style.background = TEAM_COLORS[i];
 
 tile.innerHTML = `
 <input id="t${i}">
 <div class="team-max" id="t${i}_max">Max: —</div>
 `;
 
-tile.onclick = ()=> placeBid(i);
+tile.onclick = ()=>placeBid(i);
 
 teamGrid.appendChild(tile);
+
 }
 
-/* TEAM NAMES SYNC */
 db.ref('teams').on('value', snap=>{
 
 const teams = snap.val() || {};
@@ -124,9 +348,9 @@ document.getElementById('t'+i).value =
 teams[i] || ('Team '+i);
 
 }
+
 });
 
-/* SAVE TEAM NAMES */
 teamGrid.addEventListener('input', ()=>{
 
 const obj = {};
@@ -142,7 +366,6 @@ db.ref('teams').set(obj);
 
 });
 
-/* GOOGLE SHEET */
 const SHEET_ID =
 "1uww5Uq0-kya9gM4pTWFgp79n4lVgeH0Nr6C_v7FOjQ4";
 
@@ -172,24 +395,22 @@ for(let i=0;i<TEAM_COUNT;i++){
 const cell = rows[i];
 
 newMax[String(i+1)] =
-(cell && cell.v)
-? Number(cell.v)
-: 0;
+cell && cell.v ? Number(cell.v) : 0;
+
 }
 
 maxBids = newMax;
 
 db.ref('maxBids').set(maxBids);
 
-})
-.catch(err=>console.log(err));
+});
+
 }
 
 fetchSheet();
 
 setInterval(fetchSheet,10000);
 
-/* MAX BID DISPLAY */
 db.ref('maxBids').on('value', snap=>{
 
 maxBids = snap.val() || {};
@@ -203,7 +424,6 @@ document.getElementById(`t${i}_max`).innerText =
 
 });
 
-/* INCREMENT RULES */
 let increments = [];
 
 db.ref('increments').on('value', snap=>{
@@ -227,7 +447,6 @@ r.inc ?? "";
 
 });
 
-/* SAVE RULES */
 function saveRules(){
 
 const arr = [];
@@ -248,28 +467,24 @@ alert("Rules Saved");
 
 }
 
-/* INCREMENT LOGIC */
-function getIncrementFor(bid){
+function getIncrementFor(v){
 
 for(let i=0;i<increments.length;i++){
 
 const r = increments[i];
 
-const from = Number(r.from);
-const to = Number(r.to);
-
-if(bid >= from && bid <= to){
+if(v >= Number(r.from) && v <= Number(r.to)){
 
 return Number(r.inc);
 
 }
+
 }
 
 return Number(document.getElementById('fallbackInc').value) || 10;
 
 }
 
-/* STATE */
 let currentBid =
 Number(document.getElementById('startBid').value);
 
@@ -283,10 +498,9 @@ let auctionRunning = false;
 
 let cooldownActive = false;
 
-/* DISPLAY */
 function setCurrentStrip(teamNum){
 
-const col = TEAM_COLORS[teamNum].base;
+const col = TEAM_COLORS[teamNum];
 
 document.getElementById('currentStrip').style.background = col;
 
@@ -304,7 +518,6 @@ team;
 
 }
 
-/* OWNER SYNC */
 function updateOwners(){
 
 db.ref('liveDisplay').set({
@@ -316,7 +529,6 @@ ts:Date.now()
 
 }
 
-/* LAST10 */
 function pushToLast10(teamNum, amount, teamName){
 
 db.ref('last10bids').once('value').then(s=>{
@@ -337,7 +549,6 @@ db.ref('last10bids').set(arr);
 
 }
 
-/* COOLDOWN */
 function startCooldown(){
 
 cooldownActive = true;
@@ -348,7 +559,6 @@ cooldownActive = false;
 
 }
 
-/* PLACE BID */
 function placeBid(teamNum){
 
 if(saleLocked) return;
@@ -384,6 +594,7 @@ document.getElementById('rejectionNote').innerText='';
 },3000);
 
 return;
+
 }
 
 const teamName =
@@ -415,7 +626,6 @@ startCooldown();
 
 }
 
-/* UNDO */
 function undoBid(){
 
 if(history.length === 0) return;
@@ -430,7 +640,6 @@ updateOwners();
 
 }
 
-/* SOLD */
 function playerSold(){
 
 saleLocked = true;
@@ -452,7 +661,6 @@ document.getElementById('currentTeam').innerText =
 
 }
 
-/* RESET */
 function resetBid(){
 
 auctionRunning = false;
@@ -472,7 +680,6 @@ db.ref('last10bids').set([]);
 
 }
 
-/* START */
 function startAuction(){
 
 saleLocked = false;
@@ -481,7 +688,6 @@ auctionRunning = true;
 
 }
 
-/* KEYBOARD */
 document.addEventListener('keydown', e=>{
 
 if(e.key >= '1' && e.key <= '9'){
@@ -498,7 +704,6 @@ placeBid(10);
 
 });
 
-/* OWNER BIDS */
 let lastSeen = 0;
 
 db.ref('latestBid').on('value', snap=>{
@@ -515,7 +720,6 @@ placeBid(Number(d.teamNum));
 
 });
 
-/* INIT */
 updateDisplay('---');
 
 setCurrentStrip(1);
@@ -523,3 +727,6 @@ setCurrentStrip(1);
 updateOwners();
 
 </script>
+
+</body>
+</html>
