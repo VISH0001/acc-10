@@ -8,7 +8,6 @@
 <style>
 :root{
   --dark-bg:#00111a;
-  --tile-bg:#001621;
   --neon:#00eaff;
   --neon2:#9ffcff;
 }
@@ -113,7 +112,6 @@ body{
   display:flex;
   border-radius:12px;
   overflow:hidden;
-  background:#001621;
 }
 
 .team-cell .strip{
@@ -246,7 +244,7 @@ Start Auction
 
 <script>
 
-const BID_COOLDOWN = 3000;
+const BID_COOLDOWN = 1500;
 
 const firebaseConfig = {
   apiKey: "AIzaSyCX6FYo5gVgCmds7Xf63xF-Xcg6eIutQmk",
@@ -289,16 +287,16 @@ const defaultTeams = {
 };
 
 const TEAM_COLORS = {
-  1: { base:"#1565C0" },
-  2: { base:"#C62828" },
-  3: { base:"#2E7D32" },
-  4: { base:"#6A1B9A" },
-  5: { base:"#EF6C00" },
-  6: { base:"#00838F" },
-  7: { base:"#AD1457" },
-  8: { base:"#5D4037" },
-  9: { base:"#283593" },
-  10:{ base:"#9E9D24" }
+  1:"#1565C0",
+  2:"#C62828",
+  3:"#2E7D32",
+  4:"#6A1B9A",
+  5:"#EF6C00",
+  6:"#00838F",
+  7:"#AD1457",
+  8:"#5D4037",
+  9:"#283593",
+  10:"#9E9D24"
 };
 
 const increments = [
@@ -307,12 +305,6 @@ const increments = [
   {from:40,to:99,inc:3},
   {from:100,to:500,inc:5}
 ];
-
-db.ref('teams').once('value').then(snap=>{
-  if(!snap.exists()){
-    db.ref('teams').set(defaultTeams);
-  }
-});
 
 db.ref('ownerKeys').once('value').then(snap=>{
   if(!snap.exists()){
@@ -328,7 +320,7 @@ for(let i=1;i<=10;i++){
 
   tile.className = 'team-cell';
 
-  const col = TEAM_COLORS[i].base;
+  const col = TEAM_COLORS[i];
 
   tile.style.background = col;
 
@@ -349,18 +341,33 @@ for(let i=1;i<=10;i++){
 
 }
 
-/* TEAM LOAD */
+/* TEAM LOAD + PERSIST */
 
-db.ref('teams').on('value', snap=>{
+db.ref('teams').once('value').then(snap=>{
 
-  const teams = snap.val() || defaultTeams;
+const data = snap.val();
 
-  for(let i=1;i<=10;i++){
+if(data){
 
-    document.getElementById('t'+i).value =
-    teams[i] || ('Team '+i);
+for(let i=1;i<=10;i++){
 
-  }
+document.getElementById('t'+i).value =
+data[i] || ('Team '+i);
+
+}
+
+}else{
+
+db.ref('teams').set(defaultTeams);
+
+for(let i=1;i<=10;i++){
+
+document.getElementById('t'+i).value =
+defaultTeams[i];
+
+}
+
+}
 
 });
 
@@ -544,7 +551,7 @@ team;
 function setCurrentStrip(teamNum){
 
 const col =
-TEAM_COLORS[teamNum].base;
+TEAM_COLORS[teamNum];
 
 document.getElementById('currentStrip').style.background =
 col;
