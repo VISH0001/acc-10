@@ -61,12 +61,13 @@ margin:20px auto;
 border-radius:14px;
 overflow:hidden;
 display:flex;
-background:#0b4d6b;
+background:#1565C0;
+transition:0.2s;
 }
 
 .color-strip{
 width:60px;
-background:#0b4d6b;
+background:#1565C0;
 }
 
 .content{
@@ -88,6 +89,7 @@ margin-top:8px;
 margin-top:8px;
 color:#ff9999;
 font-weight:bold;
+min-height:22px;
 }
 
 .team-grid{
@@ -454,9 +456,9 @@ const arr = [];
 for(let i=1;i<=5;i++){
 
 arr.push({
-from:Number(document.getElementById(`r${i}_from`).value),
-to:Number(document.getElementById(`r${i}_to`).value),
-inc:Number(document.getElementById(`r${i}_inc`).value)
+from:parseFloat(document.getElementById(`r${i}_from`).value),
+to:parseFloat(document.getElementById(`r${i}_to`).value),
+inc:parseFloat(document.getElementById(`r${i}_inc`).value)
 });
 
 }
@@ -469,19 +471,37 @@ alert("Rules Saved");
 
 function getIncrementFor(v){
 
+v = parseFloat(v);
+
 for(let i=0;i<increments.length;i++){
 
 const r = increments[i];
 
-if(v >= Number(r.from) && v <= Number(r.to)){
+if(!r) continue;
 
-return Number(r.inc);
+const from = parseFloat(r.from);
+const to = parseFloat(r.to);
+const inc = parseFloat(r.inc);
+
+if(
+isNaN(from) ||
+isNaN(to) ||
+isNaN(inc)
+){
+continue;
+}
+
+if(v >= from && v <= to){
+
+return inc;
 
 }
 
 }
 
-return Number(document.getElementById('fallbackInc').value) || 10;
+return parseFloat(
+document.getElementById('fallbackInc').value
+) || 10;
 
 }
 
