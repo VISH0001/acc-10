@@ -295,8 +295,26 @@ for(let i=1;i<=TEAM_COUNT;i++){
 defaultTeams[i] = "Team " + i;
 }
 
+/* PRESERVE TEAM NAMES */
 db.ref('teams').once('value').then(s=>{
-if(!s.exists()) db.ref('teams').set(defaultTeams);
+
+const existing = s.val();
+
+if(!existing){
+
+db.ref('teams').set(defaultTeams);
+
+return;
+
+}
+
+const merged = {
+...defaultTeams,
+...existing
+};
+
+db.ref('teams').set(merged);
+
 });
 
 db.ref('ownerKeys').once('value').then(s=>{
@@ -579,6 +597,7 @@ cooldownActive = false;
 
 }
 
+/* ORIGINAL STYLE BID FLOW */
 function placeBid(teamNum){
 
 if(saleLocked) return;
@@ -589,20 +608,27 @@ if(cooldownActive) return;
 
 if(lastBidTeam === teamNum) return;
 
-const teamMax =
-Number(maxBids[String(teamNum)] || 0);
+const isFirstAccepted =
+(history.length === 0);
 
-const isFirstBid =
-history.length === 0;
+let nextValue;
 
-let nextValue = currentBid;
+if(isFirstAccepted){
 
-if(!isFirstBid){
+nextValue = Number(currentBid);
+
+}else{
+
+const inc =
+Number(getIncrementFor(currentBid));
 
 nextValue =
-currentBid + getIncrementFor(currentBid);
+Number(currentBid) + inc;
 
 }
+
+const teamMax =
+Number(maxBids[String(teamNum)] || 0);
 
 if(teamMax > 0 && nextValue > teamMax){
 
@@ -625,10 +651,17 @@ bid:currentBid,
 team:document.getElementById('currentTeam').innerText
 });
 
-if(!isFirstBid){
+if(isFirstAccepted){
+
+currentBid = Number(currentBid);
+
+}else{
+
+const inc =
+Number(getIncrementFor(currentBid));
 
 currentBid =
-currentBid + getIncrementFor(currentBid);
+Number(currentBid) + inc;
 
 }
 
@@ -640,7 +673,11 @@ setCurrentStrip(teamNum);
 
 updateOwners();
 
-pushToLast10(teamNum,currentBid,teamName);
+pushToLast10(
+teamNum,
+currentBid,
+teamName
+);
 
 startCooldown();
 
@@ -697,6 +734,8 @@ updateDisplay('---');
 updateOwners();
 
 db.ref('last10bids').set([]);
+
+lastBidTeam = null;
 
 }
 
