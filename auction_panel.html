@@ -190,15 +190,10 @@ body{
 <input id="startBid" type="number" value="1">
 </div>
 
-<div class="control-box">
-<label>Fallback Increment</label>
-<input id="fallbackInc" type="number" value="1">
-</div>
-
 <button class="button" onclick="undoBid()">Undo</button>
 <button class="button" onclick="playerSold()">Player Sold</button>
 <button class="button" onclick="resetBid()">Reset</button>
-<button class="button" onclick="startAuction()" id="startAuctionBtn">
+<button class="button" onclick="startAuction()">
 Start Auction
 </button>
 
@@ -225,32 +220,24 @@ Start Auction
 <div class="rules">
 
 <div class="row">
-<input value="1" disabled>
-<input value="20" disabled>
+<input value="1 - 19" disabled>
 <input value="+1" disabled>
 </div>
 
 <div class="row">
-<input value="21" disabled>
-<input value="40" disabled>
+<input value="20 - 39" disabled>
 <input value="+2" disabled>
 </div>
 
 <div class="row">
-<input value="41" disabled>
-<input value="100" disabled>
+<input value="40 - 99" disabled>
 <input value="+3" disabled>
 </div>
 
 <div class="row">
-<input value="101" disabled>
-<input value="500" disabled>
+<input value="100 - 500" disabled>
 <input value="+5" disabled>
 </div>
-
-<button class="button" disabled>
-Fixed Increment Rules
-</button>
 
 </div>
 
@@ -302,32 +289,36 @@ const defaultTeams = {
 };
 
 const TEAM_COLORS = {
-  1: { base:"#1565C0", glow:"rgba(21,101,192,0.25)" },
-  2: { base:"#C62828", glow:"rgba(198,40,40,0.25)" },
-  3: { base:"#2E7D32", glow:"rgba(46,125,50,0.25)" },
-  4: { base:"#6A1B9A", glow:"rgba(106,27,154,0.25)" },
-  5: { base:"#EF6C00", glow:"rgba(239,108,0,0.25)" },
-  6: { base:"#00838F", glow:"rgba(0,131,143,0.25)" },
-  7: { base:"#AD1457", glow:"rgba(173,20,87,0.25)" },
-  8: { base:"#5D4037", glow:"rgba(93,64,55,0.25)" },
-  9: { base:"#283593", glow:"rgba(40,53,147,0.25)" },
-  10:{ base:"#9E9D24", glow:"rgba(158,157,36,0.25)" }
+  1: { base:"#1565C0" },
+  2: { base:"#C62828" },
+  3: { base:"#2E7D32" },
+  4: { base:"#6A1B9A" },
+  5: { base:"#EF6C00" },
+  6: { base:"#00838F" },
+  7: { base:"#AD1457" },
+  8: { base:"#5D4037" },
+  9: { base:"#283593" },
+  10:{ base:"#9E9D24" }
 };
 
+const increments = [
+  {from:1,to:19,inc:1},
+  {from:20,to:39,inc:2},
+  {from:40,to:99,inc:3},
+  {from:100,to:500,inc:5}
+];
+
 db.ref('teams').once('value').then(snap=>{
-  if(!snap.exists()) db.ref('teams').set(defaultTeams);
+  if(!snap.exists()){
+    db.ref('teams').set(defaultTeams);
+  }
 });
 
 db.ref('ownerKeys').once('value').then(snap=>{
-  if(!snap.exists()) db.ref('ownerKeys').set(ownerKeys);
+  if(!snap.exists()){
+    db.ref('ownerKeys').set(ownerKeys);
+  }
 });
-
-const increments = [
-  {from:1,to:20,inc:1},
-  {from:21,to:40,inc:2},
-  {from:41,to:100,inc:3},
-  {from:101,to:500,inc:5}
-];
 
 const teamGrid = document.getElementById('teamGrid');
 
@@ -358,6 +349,8 @@ for(let i=1;i<=10;i++){
 
 }
 
+/* TEAM LOAD */
+
 db.ref('teams').on('value', snap=>{
 
   const teams = snap.val() || defaultTeams;
@@ -371,20 +364,32 @@ db.ref('teams').on('value', snap=>{
 
 });
 
-teamGrid.addEventListener('input', ()=>{
+/* TEAM SAVE */
 
-  const obj = {};
+for(let i=1;i<=10;i++){
 
-  for(let i=1;i<=10;i++){
+document.addEventListener('input', e=>{
 
-    obj[i] =
-    document.getElementById('t'+i).value;
+if(e.target.id === 't'+i){
 
-  }
+const obj = {};
 
-  db.ref('teams').set(obj);
+for(let j=1;j<=10;j++){
+
+obj[j] =
+document.getElementById('t'+j).value;
+
+}
+
+db.ref('teams').set(obj);
+
+}
 
 });
+
+}
+
+/* SHEET */
 
 const SHEET_ID =
 "1uww5Uq0-kya9gM4pTWFgp79n4lVgeH0Nr6C_v7FOjQ4";
@@ -444,6 +449,8 @@ document.getElementById(`t${i}_max`).innerText =
 
 });
 
+/* INCREMENT */
+
 function getIncrementFor(v){
 
 for(let i=0;i<increments.length;i++){
@@ -461,6 +468,8 @@ return r.inc;
 return 1;
 
 }
+
+/* LAST10 */
 
 function pushToLast10(teamNum, amount, teamName){
 
@@ -496,6 +505,8 @@ db.ref('last10bids').set(arr);
 
 }
 
+/* STATE */
+
 let currentBid = 1;
 
 let history = [];
@@ -508,6 +519,8 @@ let auctionRunning = false;
 
 let cooldownActive = false;
 
+/* START */
+
 function startAuction(){
 
 saleLocked = false;
@@ -515,6 +528,8 @@ saleLocked = false;
 auctionRunning = true;
 
 }
+
+/* DISPLAY */
 
 function updateDisplay(team){
 
@@ -549,6 +564,8 @@ ts:Date.now()
 });
 
 }
+
+/* BID */
 
 function placeBid(teamNum){
 
@@ -623,6 +640,8 @@ cooldownActive = false;
 
 }
 
+/* UNDO */
+
 function undoBid(){
 
 saleLocked = false;
@@ -646,6 +665,8 @@ updateOwners();
 removeTopLast10();
 
 }
+
+/* RESET */
 
 function resetBid(){
 
@@ -671,6 +692,8 @@ updateOwners();
 db.ref('last10bids').set([]);
 
 }
+
+/* SOLD */
 
 function playerSold(){
 
@@ -701,6 +724,8 @@ ts:Date.now()
 
 }
 
+/* KEYBOARD */
+
 document.addEventListener('keydown', e=>{
 
 if(e.key >= '1' && e.key <= '9'){
@@ -716,6 +741,8 @@ placeBid(10);
 }
 
 });
+
+/* OWNER BIDS */
 
 let lastSeenTime = 0;
 
